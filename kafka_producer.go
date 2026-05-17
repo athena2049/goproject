@@ -15,6 +15,7 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+// go run . -mode kafka-producer -kafka-batch 500
 type appNameRow struct {
 	ID      uint64
 	AppName string

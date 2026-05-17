@@ -26,7 +26,7 @@ const (
 	defaultTable    = "app_names"
 	defaultTotal    = uint64(100_000_000)
 	defaultBatch    = 2_000
-	defaultKafkaURL = "127.0.0.1:9092"
+	defaultKafkaURL = "localhost:9092"
 	defaultTopic    = "test"
 )
 
@@ -45,6 +45,7 @@ type config struct {
 	KafkaURL   string
 	Topic      string
 	KafkaBatch int
+	KafkaGroup string
 	PprofAddr  string
 	PprofHold  bool
 }
@@ -70,7 +71,7 @@ func main() {
 
 func parseFlags() config {
 	cfg := config{}
-	flag.StringVar(&cfg.Mode, "mode", "seed", "run mode: seed or kafka-producer")
+	flag.StringVar(&cfg.Mode, "mode", "seed", "run mode: seed, kafka-producer, or kafka-consumer")
 	flag.StringVar(&cfg.Host, "host", getenv("MYSQL_HOST", "127.0.0.1"), "MySQL host")
 	flag.StringVar(&cfg.Port, "port", getenv("MYSQL_PORT", "3306"), "MySQL port")
 	flag.StringVar(&cfg.User, "user", getenv("MYSQL_USER", "root"), "MySQL user")
@@ -84,6 +85,7 @@ func parseFlags() config {
 	flag.StringVar(&cfg.KafkaURL, "kafka", defaultKafkaURL, "Kafka broker address")
 	flag.StringVar(&cfg.Topic, "topic", defaultTopic, "Kafka topic")
 	flag.IntVar(&cfg.KafkaBatch, "kafka-batch", 500, "rows/messages per Kafka push")
+	flag.StringVar(&cfg.KafkaGroup, "kafka-group", "goproject-consumer", "Kafka consumer group")
 	flag.StringVar(&cfg.PprofAddr, "pprof", "127.0.0.1:6060", "pprof listen address, empty to disable")
 	flag.BoolVar(&cfg.PprofHold, "pprof-hold", true, "keep process alive after run finishes when pprof is enabled")
 	flag.Parse()
@@ -93,11 +95,15 @@ func parseFlags() config {
 func run(ctx context.Context, cfg config) error {
 	startPprofServer(cfg.PprofAddr)
 
+	// go run . -mode kafka-consumer -kafka localhost:9092 -topic test -workers 4
 	if cfg.Mode == "kafka-producer" {
 		return runKafkaProducer(ctx, cfg)
 	}
+	if cfg.Mode == "kafka-consumer" {
+		return runKafkaConsumer(ctx, cfg)
+	}
 	if cfg.Mode != "seed" {
-		return fmt.Errorf("unsupported mode %q, want seed or kafka-producer", cfg.Mode)
+		return fmt.Errorf("unsupported mode %q, want seed, kafka-producer, or kafka-consumer", cfg.Mode)
 	}
 	if cfg.BatchSize <= 0 {
 		return errors.New("batch must be greater than 0")
