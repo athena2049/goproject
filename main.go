@@ -31,22 +31,22 @@ const (
 )
 
 type config struct {
-	Mode         string
-	Host         string
-	Port         string
-	User         string
-	Password     string
-	Database     string
-	Table        string
-	Total        uint64
-	BatchSize    int
-	Workers      int
-	InsertDate   string
-	KafkaURL     string
-	Topic        string
-	KafkaBatch   int
-	KafkaWorkers int
-	PprofAddr    string
+	Mode       string
+	Host       string
+	Port       string
+	User       string
+	Password   string
+	Database   string
+	Table      string
+	Total      uint64
+	BatchSize  int
+	Workers    int
+	InsertDate string
+	KafkaURL   string
+	Topic      string
+	KafkaBatch int
+	PprofAddr  string
+	PprofHold  bool
 }
 
 type appRecord struct {
@@ -65,6 +65,7 @@ func main() {
 		log.Fatalf("failed: %v", err)
 	}
 	log.Printf("cost: %f\n", time.Since(start).Minutes())
+	holdForPprof(ctx, cfg)
 }
 
 func parseFlags() config {
@@ -83,8 +84,8 @@ func parseFlags() config {
 	flag.StringVar(&cfg.KafkaURL, "kafka", defaultKafkaURL, "Kafka broker address")
 	flag.StringVar(&cfg.Topic, "topic", defaultTopic, "Kafka topic")
 	flag.IntVar(&cfg.KafkaBatch, "kafka-batch", 500, "rows/messages per Kafka push")
-	flag.IntVar(&cfg.KafkaWorkers, "kafka-workers", 4, "concurrent Kafka push workers")
 	flag.StringVar(&cfg.PprofAddr, "pprof", "127.0.0.1:6060", "pprof listen address, empty to disable")
+	flag.BoolVar(&cfg.PprofHold, "pprof-hold", true, "keep process alive after run finishes when pprof is enabled")
 	flag.Parse()
 	return cfg
 }
@@ -153,6 +154,15 @@ func startPprofServer(addr string) {
 			log.Printf("pprof stopped: %v", err)
 		}
 	}()
+}
+
+func holdForPprof(ctx context.Context, cfg config) {
+	if cfg.PprofAddr == "" || !cfg.PprofHold {
+		return
+	}
+
+	log.Printf("run finished; keeping process alive for pprof: http://%s/debug/pprof/ (press Ctrl+C to exit)", cfg.PprofAddr)
+	<-ctx.Done()
 }
 
 func createDatabase(ctx context.Context, db *sql.DB, name string) error {
