@@ -52,8 +52,8 @@ func runKafkaProducer(ctx context.Context, cfg config) error {
 		Topic:        cfg.Topic,
 		Balancer:     &kafka.LeastBytes{},
 		RequiredAcks: kafka.RequireOne,
-		//BatchSize:    cfg.KafkaBatch,
-		//BatchTimeout: 5 * time.Millisecond,
+		BatchSize:    cfg.KafkaBatch,
+		BatchTimeout: 5 * time.Millisecond,
 	}
 	defer writer.Close()
 

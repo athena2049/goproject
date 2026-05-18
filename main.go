@@ -65,7 +65,7 @@ func main() {
 	if err := run(ctx, cfg); err != nil {
 		log.Fatalf("failed: %v", err)
 	}
-	log.Printf("cost: %f\n", time.Since(start).Minutes())
+	log.Printf("cost: %f\nm", time.Since(start).Minutes())
 	holdForPprof(ctx, cfg)
 }
 
